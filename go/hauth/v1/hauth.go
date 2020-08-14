@@ -204,7 +204,9 @@ func (it *AccessKey) UnmarshalTOML(p interface{}) error {
 				it.User = v.(string)
 
 			case "roles":
-				it.Roles = strings.Split(v.(string), ",")
+				if v2, ok := v.([]string); ok {
+					it.Roles = v2
+				}
 
 			case "scopes":
 				if v2, ok := v.([]*ScopeFilter); ok {
