@@ -26,7 +26,7 @@ type GrpcAppCredential struct {
 	ac *AppCredential
 }
 
-func NewGrpcAppCredential(k *AuthKey) credentials.PerRPCCredentials {
+func NewGrpcAppCredential(k *AccessKey) credentials.PerRPCCredentials {
 	return GrpcAppCredential{
 		ac: NewAppCredential(k),
 	}
@@ -42,7 +42,7 @@ func (s GrpcAppCredential) RequireTransportSecurity() bool {
 	return false
 }
 
-func GrpcAppValidator(ctx context.Context) (*AppValidator, error) {
+func GrpcAppValidator(ctx context.Context, keyMgr *AccessKeyManager) (*AppValidator, error) {
 
 	if ctx == nil {
 		return nil, errors.New("no auth token found")
@@ -59,7 +59,7 @@ func GrpcAppValidator(ctx context.Context) (*AppValidator, error) {
 		return nil, errors.New("no auth token found")
 	}
 
-	av, err := NewAppValidator(t[0])
+	av, err := NewAppValidator(t[0], keyMgr)
 	if err != nil {
 		return nil, err
 	}
@@ -67,21 +67,16 @@ func GrpcAppValidator(ctx context.Context) (*AppValidator, error) {
 	return av, nil
 }
 
-func GrpcAppCredentialValid(ctx context.Context, mgr *AuthKeyManager) error {
+func GrpcAppCredentialValid(ctx context.Context, keyMgr *AccessKeyManager) error {
 
-	if mgr == nil {
-		return errors.New("not AuthKeyManager setup")
+	if keyMgr == nil {
+		return errors.New("no AccessKeyManager found")
 	}
 
-	av, err := GrpcAppValidator(ctx)
+	av, err := GrpcAppValidator(ctx, keyMgr)
 	if err != nil {
 		return err
 	}
 
-	key := mgr.KeyGet(av.AccessKey)
-	if key == nil {
-		return errors.New("no auth key found")
-	}
-
-	return av.SignValid(nil, key)
+	return av.SignValid(nil)
 }

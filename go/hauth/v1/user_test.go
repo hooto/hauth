@@ -20,22 +20,30 @@ import (
 )
 
 var (
-	tKeys = []*AuthKey{
-		{AccessKey: "be2c1fcf532baaa9", SecretKey: "c9a1a8ca13740018f1dd840a073ffc2e"},
-		{AccessKey: "d4d7d973aa8d3c70", SecretKey: "ec1f6f37c8d81b7bdb855b651523367e"},
+	tKeyMgr = &AccessKeyManager{
+		items: map[string]*AccessKey{
+			"be2c1fcf532baaa9": {Id: "be2c1fcf532baaa9", Secret: "c9a1a8ca13740018f1dd840a073ffc2e"},
+			"d4d7d973aa8d3c70": {Id: "d4d7d973aa8d3c70", Secret: "ec1f6f37c8d81b7bdb855b651523367e"},
+		},
 	}
-	tKeyErrs = []*AuthKey{
-		{AccessKey: "be2c1fcf532baaa9", SecretKey: "c9a1a8ca13740018f"},
+	tKeyErrs = &AccessKeyManager{
+		items: map[string]*AccessKey{
+			"be2c1fcf532baaa9": {Id: "be2c1fcf532baaa9", Secret: "c9a1a8ca13740018f"},
+		},
 	}
-	tKeyNull     = []*AuthKey{}
+	tKeyNull     = NewAccessKeyManager()
 	tPayloadItem = &UserPayload{
 		Id:      "guest",
 		Roles:   []uint32{100, 200},
 		Groups:  []string{"staff"},
 		Expired: 2012345678,
 	}
-	tToken = tPayloadItem.SignToken(tKeys)
+	tToken = "" // tPayloadItem.SignToken(tKeyMgr)
 )
+
+func init() {
+	tToken = tPayloadItem.SignToken(tKeyMgr)
+}
 
 func Test_UserMain(t *testing.T) {
 
@@ -48,8 +56,8 @@ func Test_UserMain(t *testing.T) {
 
 	pl.Expired = time.Now().Unix() + 1
 
-	token := pl.SignToken(tKeys)
-	t.Logf("SignToken %s", token)
+	token := pl.SignToken(tKeyMgr)
+	t.Logf("SignToken keys %d, token %s", len(tKeyMgr.items), token)
 
 	rs, err := NewUserValidator(token)
 	if rs == nil || err != nil {
@@ -69,20 +77,20 @@ func Test_UserMain(t *testing.T) {
 
 	time.Sleep(2e9) // expired
 
-	if err := rs.SignValid(tKeys); err == nil {
+	if err := rs.SignValid(tKeyMgr); err == nil {
 		t.Fatal("Failed on UserValid")
 	}
 }
 
 func Benchmark_UserPayload_SignToken(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		tPayloadItem.SignToken(tKeys)
+		tPayloadItem.SignToken(tKeyMgr)
 	}
 }
 
 func Benchmark_UserValidator_SignValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		rs, _ := NewUserValidator(tToken)
-		rs.SignValid(tKeys)
+		rs.SignValid(tKeyMgr)
 	}
 }

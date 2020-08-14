@@ -17,7 +17,6 @@ package hauth
 import (
 	"crypto/sha256"
 	"errors"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -32,10 +31,10 @@ const (
 
 type UserValidator struct {
 	UserPayload
-	version   string
-	payload   string
-	accessKey string
-	sign      string
+	version     string
+	payload     string
+	accessKeyId string
+	sign        string
 }
 
 func NewUserPayload(id, name string, roles []uint32, groups []string, ttl int64) *UserPayload {
@@ -59,27 +58,20 @@ func (it *UserPayload) IsExpired() bool {
 	return it.Expired <= time.Now().Unix()
 }
 
-func (it *UserPayload) SignToken(keys []*AuthKey) string {
+func (it *UserPayload) SignToken(keyMgr *AccessKeyManager) string {
 
-	var key *AuthKey
-
-	if n := len(keys); n == 1 {
-		key = keys[0]
-	} else if n > 1 {
-		key = keys[rand.Intn(n)]
-	} else {
-		key = authKeyDefault
-	}
-
-	bs, _ := proto.Marshal(it)
-	payload := base64Url.EncodeToString(bs)
+	var (
+		key     = keyMgr.KeyRand()
+		bs, _   = proto.Marshal(it)
+		payload = base64Url.EncodeToString(bs)
+	)
 
 	return userTokenVersion2 + "." +
 		payload + "." +
-		key.AccessKey + ":" + userSign(userTokenVersion2, payload, key.SecretKey)
+		key.Id + ":" + userSign(userTokenVersion2, payload, key.Secret)
 }
 
-func UserValid(token string, keyMgr *AuthKeyManager) (*UserValidator, error) {
+func UserValid(token string, keyMgr *AccessKeyManager) (*UserValidator, error) {
 	v, err := NewUserValidator(token)
 	if err != nil {
 		return nil, err
@@ -121,7 +113,7 @@ func NewUserValidator(token string) (*UserValidator, error) {
 			}
 
 			//
-			vr.accessKey = token[n2+1 : n2k]
+			vr.accessKeyId = token[n2+1 : n2k]
 			vr.sign = token[n2k+1:]
 
 			return &vr, nil
@@ -131,7 +123,7 @@ func NewUserValidator(token string) (*UserValidator, error) {
 	return nil, errors.New("invalid sign token")
 }
 
-func (it *UserValidator) SignValid(keyMgr *AuthKeyManager) error {
+func (it *UserValidator) SignValid(keyMgr *AccessKeyManager) error {
 
 	//
 	if it.IsExpired() {
@@ -139,9 +131,9 @@ func (it *UserValidator) SignValid(keyMgr *AuthKeyManager) error {
 	}
 
 	//
-	key := keyMgr.KeyGet(it.accessKey)
+	key := keyMgr.KeyGet(it.accessKeyId)
 	if key == nil ||
-		userSign(it.version, it.payload, key.SecretKey) != it.sign {
+		userSign(it.version, it.payload, key.Secret) != it.sign {
 		return errors.New("sign denied")
 	}
 

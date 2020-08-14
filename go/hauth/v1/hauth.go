@@ -16,6 +16,8 @@ package hauth
 
 import (
 	"encoding/base64"
+	"encoding/json"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -23,45 +25,109 @@ import (
 )
 
 var (
-	authKeyDefault = &AuthKey{
-		AccessKey: "00000000",
-		SecretKey: idhash.RandBase64String(40),
+	AccessKeyIdReg = regexp.MustCompile("^[0-9a-z]{1}[a-z0-9_]{3,31}$")
+)
+
+var (
+	authKeyDefault = &AccessKey{
+		Id:     "00000000",
+		Secret: idhash.RandBase64String(40),
 	}
 	base64Std = base64.StdEncoding.WithPadding(base64.NoPadding)
 	base64Url = base64.URLEncoding.WithPadding(base64.NoPadding)
 )
 
-type AuthKeyManager struct {
+type AccessKeyManager struct {
 	mu    sync.RWMutex
-	items map[string]*AuthKey
+	items map[string]*AccessKey
+	roles map[string]*accessKeyManagerRole
 }
 
-func NewAuthKeyManager() *AuthKeyManager {
-	return &AuthKeyManager{
-		items: map[string]*AuthKey{},
+type accessKeyManagerRole struct {
+	permissions map[string]bool
+}
+
+func NewAccessKeyManager() *AccessKeyManager {
+	return &AccessKeyManager{
+		items: map[string]*AccessKey{},
+		roles: map[string]*accessKeyManagerRole{},
 	}
 }
 
-func (it *AuthKeyManager) KeySet(k *AuthKey) error {
+func (it *AccessKeyManager) KeySet(k *AccessKey) error {
 
 	it.mu.Lock()
 	defer it.mu.Unlock()
 
-	it.items[k.AccessKey] = k
+	if ak, ok := it.items[k.Id]; !ok || k != ak {
+		it.items[k.Id] = k
+	}
 
 	return nil
 }
 
-func (it *AuthKeyManager) KeyGet(ak string) *AuthKey {
+func (it *AccessKeyManager) KeyGet(id string) *AccessKey {
 
 	it.mu.RLock()
 	defer it.mu.RUnlock()
 
-	key, ok := it.items[ak]
+	key, ok := it.items[id]
 	if ok {
 		return key
 	}
 	return nil
+}
+
+func (it *AccessKeyManager) KeyRand() *AccessKey {
+
+	it.mu.RLock()
+	defer it.mu.RUnlock()
+
+	for _, key := range it.items {
+		return key
+	}
+
+	return authKeyDefault
+}
+
+func (it *AccessKeyManager) RoleSet(r *Role) *AccessKeyManager {
+
+	it.mu.Lock()
+	defer it.mu.Unlock()
+
+	role, ok := it.roles[r.Name]
+	if !ok {
+		role = &accessKeyManagerRole{
+			permissions: map[string]bool{},
+		}
+		it.roles[r.Name] = role
+	}
+
+	for _, p := range r.Permissions {
+		role.permissions[p] = true
+	}
+
+	return it
+}
+
+func (it *AccessKeyManager) keyRoles(key *AccessKey) []*accessKeyManagerRole {
+
+	it.mu.RLock()
+	defer it.mu.RUnlock()
+
+	if len(key.Roles) == 0 {
+		return nil
+	}
+
+	roles := []*accessKeyManagerRole{}
+
+	for _, r := range key.Roles {
+		if role, ok := it.roles[r]; ok {
+			roles = append(roles, role)
+		}
+	}
+
+	return roles
 }
 
 func base64nopad(s string) string {
@@ -78,9 +144,100 @@ func base64pad(s string) string {
 	return s
 }
 
-func NewAuthKey() *AuthKey {
-	return &AuthKey{
-		AccessKey: idhash.RandHexString(16),
-		SecretKey: idhash.RandBase64String(40),
+func NewAccessKey() *AccessKey {
+	return &AccessKey{
+		Id:     idhash.RandHexString(16),
+		Secret: idhash.RandBase64String(40),
+	}
+}
+
+type fixAccessKey AccessKey
+
+func (it *AccessKey) redec() {
+
+	if it.Id == "" && it.AccessKey != "" {
+		it.Id = it.AccessKey
+	} else {
+		it.AccessKey = it.Id
+	}
+
+	if it.Secret == "" && it.SecretKey != "" {
+		it.Secret = it.SecretKey
+	} else {
+		it.SecretKey = it.Secret
+	}
+}
+
+func (it *AccessKey) reenc() {
+	if it.Id != "" {
+		it.AccessKey = ""
+	}
+	if it.Secret != "" {
+		it.SecretKey = ""
+	}
+}
+
+func (it *AccessKey) UnmarshalTOML(p interface{}) error {
+
+	data, ok := p.(map[string]interface{})
+	if ok {
+
+		for k, v := range data {
+			switch k {
+			case "id":
+				it.Id = v.(string)
+
+			case "access_key":
+				if it.Id == "" {
+					it.Id = v.(string)
+				}
+
+			case "secret":
+				it.Secret = v.(string)
+
+			case "secret_key":
+				if it.Secret == "" {
+					it.Secret = v.(string)
+				}
+
+			case "user":
+				it.User = v.(string)
+
+			case "roles":
+				it.Roles = strings.Split(v.(string), ",")
+
+			case "scopes":
+				if v2, ok := v.([]*ScopeFilter); ok {
+					it.Scopes = v2
+				}
+			}
+		}
+
+		it.redec()
+	}
+
+	return nil
+}
+
+func (it *AccessKey) UnmarshalJSON(b []byte) error {
+	var it2 fixAccessKey
+	if err := json.Unmarshal(b, &it2); err != nil {
+		return err
+	}
+	*it = AccessKey(it2)
+	it.redec()
+	return nil
+}
+
+func (it AccessKey) MarshalJSON() ([]byte, error) {
+	it.redec()
+	it.reenc()
+	return json.Marshal(fixAccessKey(it))
+}
+
+func NewScopeFilter(name, value string) *ScopeFilter {
+	return &ScopeFilter{
+		Name:  name,
+		Value: value,
 	}
 }

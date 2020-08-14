@@ -19,6 +19,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -31,18 +32,23 @@ const (
 )
 
 type AppCredential struct {
-	key     *AuthKey
+	key     *AccessKey
 	payload *AppPayload
 }
 
 type AppValidator struct {
 	AppPayload
+	mu      sync.Mutex
 	version string
 	payload []byte
 	sign    string
+	keyMgr  *AccessKeyManager
+	key     *AccessKey
+	roles   []*accessKeyManagerRole
+	scopes  map[string]string
 }
 
-func NewAppCredential(k *AuthKey) *AppCredential {
+func NewAppCredential(k *AccessKey) *AppCredential {
 	return &AppCredential{
 		key: k,
 	}
@@ -52,9 +58,9 @@ func (it *AppCredential) SignToken(data []byte) string {
 
 	if it.payload == nil {
 		it.payload = &AppPayload{
-			AccessKey: it.key.AccessKey,
-			User:      it.key.User,
-			Created:   time.Now().UnixNano() / 1e6,
+			Id:      it.key.Id,
+			User:    it.key.User,
+			Created: time.Now().UnixNano() / 1e6,
 		}
 	} else {
 		it.payload.Created = time.Now().UnixNano() / 1e6
@@ -64,30 +70,30 @@ func (it *AppCredential) SignToken(data []byte) string {
 
 	return appTokenVersion2 + "." +
 		base64Std.EncodeToString(pbs) + "." +
-		appSign(appTokenVersion2, pbs, data, it.key.SecretKey)
+		appSign(appTokenVersion2, pbs, data, it.key.Secret)
 }
 
 func (it *AppCredential) SignHttpToken(r *http.Request, data []byte) {
 	r.Header.Set(appHttpHeaderKey, it.SignToken(data))
 }
 
-func AppValidWithHttpRequest(r *http.Request, data []byte, key *AuthKey) (*AppValidator, error) {
-	return AppValid(r.Header.Get(appHttpHeaderKey), data, key)
+func AppValidWithHttpRequest(r *http.Request, data []byte, keyMgr *AccessKeyManager) (*AppValidator, error) {
+	return AppValid(r.Header.Get(appHttpHeaderKey), data, keyMgr)
 }
 
-func AppValid(token string, data []byte, key *AuthKey) (*AppValidator, error) {
-	v, err := NewAppValidator(token)
+func AppValid(token string, data []byte, keyMgr *AccessKeyManager) (*AppValidator, error) {
+	v, err := NewAppValidator(token, keyMgr)
 	if err != nil {
 		return nil, err
 	}
-	return v, v.SignValid(data, key)
+	return v, v.SignValid(data)
 }
 
-func NewAppValidatorWithHttpRequest(r *http.Request) (*AppValidator, error) {
-	return NewAppValidator(r.Header.Get(appHttpHeaderKey))
+func NewAppValidatorWithHttpRequest(r *http.Request, keyMgr *AccessKeyManager) (*AppValidator, error) {
+	return NewAppValidator(r.Header.Get(appHttpHeaderKey), keyMgr)
 }
 
-func NewAppValidator(token string) (*AppValidator, error) {
+func NewAppValidator(token string, keyMgr *AccessKeyManager) (*AppValidator, error) {
 
 	var (
 		n1 = strings.IndexByte(token, '.')
@@ -110,8 +116,8 @@ func NewAppValidator(token string) (*AppValidator, error) {
 				return nil, errors.New("invalid payload data, err " + err.Error())
 			}
 
-			if len(pv.AccessKey) < 4 {
-				return nil, errors.New("payload/access_key not found")
+			if len(pv.Id) < 4 {
+				return nil, errors.New("payload/access_key id not found")
 			}
 
 			if pv.Created < 1000000000 {
@@ -128,6 +134,8 @@ func NewAppValidator(token string) (*AppValidator, error) {
 			pv.payload = bs
 			pv.sign = token[n2+1:]
 
+			pv.keyMgr = keyMgr
+
 			return &pv, nil
 		}
 	}
@@ -135,13 +143,71 @@ func NewAppValidator(token string) (*AppValidator, error) {
 	return nil, errors.New("access token not found")
 }
 
-func (it *AppValidator) SignValid(data []byte, key *AuthKey) error {
+func (it *AppValidator) SignValid(data []byte) error {
 
-	if appSign(it.version, it.payload, data, key.SecretKey) == it.sign {
+	if it.keyMgr == nil {
+		return errors.New("sign denied : no KeyManager found")
+	}
+
+	if it.key == nil {
+		it.key = it.keyMgr.KeyGet(it.AppPayload.Id)
+		if it.key == nil {
+			return errors.New("sign denied : no AccessKey found")
+		}
+	}
+
+	if appSign(it.version, it.payload, data, it.key.Secret) == it.sign {
 		return nil
 	}
 
 	return errors.New("sign denied")
+}
+
+func (it *AppValidator) Allow(permission string, scopes ...*ScopeFilter) bool {
+
+	if it.key == nil || it.keyMgr == nil {
+		return false
+	}
+
+	if len(scopes) > 0 {
+
+		if len(it.key.Scopes) < 1 {
+			return false
+		}
+
+		if len(it.scopes) == 0 {
+			it.scopes = map[string]string{}
+			for _, v := range it.key.Scopes {
+				if v.Value != "" {
+					it.scopes[v.Name] = "," + v.Value + ","
+				}
+			}
+		}
+
+		for _, scope := range scopes {
+			if p, ok := it.scopes[scope.Name]; !ok || len(p) == 0 {
+				return false
+			} else if p != ",*," && !strings.Contains(p, ","+scope.Value+",") {
+				return false
+			}
+		}
+	}
+
+	if permission == "" {
+		return true
+	}
+
+	if len(it.roles) == 0 {
+		it.roles = it.keyMgr.keyRoles(it.key)
+	}
+
+	for _, role := range it.roles {
+		if _, ok := role.permissions[permission]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 func appSign(version string, payload, data []byte, secretKey string) string {

@@ -19,24 +19,71 @@ package hooto.hauth.v1;
 option optimize_for = LITE_RUNTIME;
 option go_package = ".;hauth";
 
-message AuthKey {
-    string access_key = 1; // struct:object_slice_key
-    string secret_key = 2;
-    string user = 3;
+message AccessKey {
+	string id = 1;
+	string secret = 2;
+	string user = 3;
+
+	repeated string roles = 6;
+	repeated ScopeFilter scopes = 11;
+
+	// v0: access key id
+	string access_key = 21;
+	// v0: access key secret
+	string secret_key = 22;
 }
 
 message UserPayload {
-    string id = 1; // struct:object_slice_key
-    string name = 2;
-    repeated uint32 roles = 4;
-    repeated string groups = 5;
-    int64 expired = 9; // unix time in seconds
+	string id = 1; // struct:object_slice_key
+	string name = 2;
+	repeated uint32 roles = 4;
+	repeated string groups = 5;
+	int64 expired = 9; // unix time in seconds
 }
 
 message AppPayload {
-    string id = 1;
+	string id = 1;
 	string user = 2;
-    string access_key = 3;
-    int64 created = 9; // unix time in milliseconds
+	string access_key = 3;
+	int64 created = 9; // unix time in milliseconds
 }
 
+
+// A role in the RBAC.
+message Role {
+
+	// The name of the role.
+	string name = 1;
+
+	// Optional. A human-readable title for the role. Typically this
+	// is limited to 100 UTF-8 bytes.
+	string title = 2;
+
+	// Optional. A human-readable description for the role.
+	string description = 3;
+
+	// The names of the permissions this role grants when bound in an IAM policy.
+	repeated string permissions = 7;
+
+	// The current launch status of the role.
+	uint64 status = 10;
+}
+
+// A permission which can be included by a role.
+message Permission {
+
+	// The name of this Permission.
+	string name = 1;
+
+	// The title of this Permission.
+	string title = 2;
+
+	// A brief description of what this Permission is used for.
+	// This permission can ONLY be used in predefined roles.
+	string description = 3;
+}
+
+message ScopeFilter {
+	string name = 1;
+	string value = 2;
+}

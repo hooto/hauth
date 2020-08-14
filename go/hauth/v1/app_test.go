@@ -19,56 +19,64 @@ import (
 )
 
 var (
-	tAppAuthKey = &AuthKey{
-		User:      "guest",
-		AccessKey: "be2c1fcf532baaa9",
-		SecretKey: "c9a1a8ca13740018f1dd840a073ffc2e",
+	tAppAccessKey = &AccessKey{
+		User:   "guest",
+		Id:     "be2c1fcf532baaa9",
+		Secret: "c9a1a8ca13740018f1dd840a073ffc2e",
 	}
-	tAppAuthKeyErr = &AuthKey{
-		User:      "guest",
-		AccessKey: "be2c1fcf532baaa9",
-		SecretKey: "c9a1a8ca13740018",
+	tAppAccessKeyErr = &AccessKey{
+		User:   "guest",
+		Id:     "be2c1fcf532baaa9",
+		Secret: "c9a1a8ca13740018",
 	}
-	tAppData = []byte(`{"id": "1234", "data": "hello world"}`)
+	tAppKeyMgr    = NewAccessKeyManager()
+	tAppKeyMgrErr = NewAccessKeyManager()
+	tAppData      = []byte(`{"id": "1234", "data": "hello world"}`)
 )
+
+func init() {
+	tAppKeyMgr.KeySet(tAppAccessKey)
+	tAppKeyMgrErr.KeySet(tAppAccessKeyErr)
+}
 
 func Test_AppMain(t *testing.T) {
 
-	pl := NewAppCredential(tAppAuthKey)
+	pl := NewAppCredential(tAppAccessKey)
 
 	token := pl.SignToken(tAppData)
 
 	t.Logf("AppSignToken %s", token)
 
-	rs, err := NewAppValidator(token)
+	rs, err := NewAppValidator(token, tAppKeyMgr)
 	if rs == nil || err != nil {
 		t.Fatal("Failed on AppValid")
 	}
 
-	if rs.User != tAppAuthKey.User {
+	if rs.User != tAppAccessKey.User {
 		t.Fatal("Failed on Token Decode")
 	}
 
-	if err := rs.SignValid(tAppData, tAppAuthKey); err != nil {
+	if err := rs.SignValid(tAppData); err != nil {
 		t.Fatal("Failed on AppValid")
 	}
 
-	if err := rs.SignValid(tAppData, tAppAuthKeyErr); err == nil {
+	rs, err = NewAppValidator(token, tAppKeyMgrErr)
+	if err := rs.SignValid(tAppData); err == nil {
 		t.Fatal("Failed on AppValid")
 	}
 }
 
 func Benchmark_AppCredential_SignToken(b *testing.B) {
-	ac := NewAppCredential(tAppAuthKey)
+	ac := NewAppCredential(tAppAccessKey)
 	for i := 0; i < b.N; i++ {
 		ac.SignToken(tAppData)
 	}
 }
 
 func Benchmark_AppValidator_SignValid(b *testing.B) {
-	token := NewAppCredential(tAppAuthKey).SignToken(tAppData)
+	token := NewAppCredential(tAppAccessKey).SignToken(tAppData)
 	for i := 0; i < b.N; i++ {
-		rs, _ := NewAppValidator(token)
-		rs.SignValid(tAppData, tAppAuthKey)
+		rs, _ := NewAppValidator(token, tAppKeyMgr)
+		rs.SignValid(tAppData)
 	}
 }
