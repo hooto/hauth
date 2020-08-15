@@ -33,9 +33,19 @@ var (
 	}
 	tKeysV0Toml = []string{
 		`access_key = "be2c1fcf532baaa9"
-secret_key = "c9a1a8ca13740018f1dd840a073ffc2e"`,
+secret_key = "c9a1a8ca13740018f1dd840a073ffc2e"
+roles = ["sa"]
+[[scopes]]
+name = "name1"
+value = "value1"
+`,
 		`access_key = "d4d7d973aa8d3c70"
-secret_key = "ec1f6f37c8d81b7bdb855b651523367e"`,
+secret_key = "ec1f6f37c8d81b7bdb855b651523367e"
+roles = ["sa"]
+[[scopes]]
+name = "name1"
+value = "value1"
+`,
 	}
 )
 
@@ -80,7 +90,9 @@ func Test_AccessKey_TomlDecode(t *testing.T) {
 			t.Fatalf("Decode %v", err)
 		} else {
 			if ak.Id != tKeysV0[i].AccessKey ||
-				ak.Secret != tKeysV0[i].SecretKey {
+				ak.Secret != tKeysV0[i].SecretKey ||
+				len(ak.Roles) != 1 || ak.Roles[0] != "sa" ||
+				len(ak.Scopes) != 1 || ak.Scopes[0].Name != "name1" {
 				t.Fatalf("Decode v0 -> v1")
 			} else {
 

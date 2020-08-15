@@ -140,7 +140,7 @@ func NewAppValidator(token string, keyMgr *AccessKeyManager) (*AppValidator, err
 		}
 	}
 
-	return nil, errors.New("access token not found")
+	return nil, errors.New("access_token not found")
 }
 
 func (it *AppValidator) SignValid(data []byte) error {
@@ -163,51 +163,82 @@ func (it *AppValidator) SignValid(data []byte) error {
 	return errors.New("sign denied")
 }
 
-func (it *AppValidator) Allow(permission string, scopes ...*ScopeFilter) bool {
+func (it *AppValidator) Allow(args ...interface{}) error {
+
+	if len(args) == 0 {
+		return errors.New("args not found")
+	}
 
 	if it.key == nil || it.keyMgr == nil {
-		return false
+		return errors.New("access_key not found")
+	}
+
+	var (
+		permissions = map[string]bool{}
+		scopes      = []*ScopeFilter{}
+	)
+
+	for _, arg := range args {
+
+		switch arg.(type) {
+
+		case string:
+			permissions[arg.(string)] = false
+
+		case *ScopeFilter:
+			scopes = append(scopes, arg.(*ScopeFilter))
+
+		default:
+			return errors.New("invalid args type")
+		}
 	}
 
 	if len(scopes) > 0 {
 
 		if len(it.key.Scopes) < 1 {
-			return false
+			return errors.New("access_key/scopes not found")
 		}
 
-		if len(it.scopes) == 0 {
+		if it.scopes == nil || len(it.scopes) == 0 {
 			it.scopes = map[string]string{}
 			for _, v := range it.key.Scopes {
-				if v.Value != "" {
-					it.scopes[v.Name] = "," + v.Value + ","
-				}
+				it.scopes[v.Name] = "," + v.Value + ","
 			}
 		}
 
 		for _, scope := range scopes {
 			if p, ok := it.scopes[scope.Name]; !ok || len(p) == 0 {
-				return false
+				return errors.New("access_key/scopes/name=" + scope.Name + " not match")
 			} else if p != ",*," && !strings.Contains(p, ","+scope.Value+",") {
-				return false
+				return errors.New("access_key/scopes/value=" + scope.Value + " not match")
 			}
 		}
 	}
 
-	if permission == "" {
-		return true
+	if len(permissions) == 0 {
+		return nil
 	}
 
 	if len(it.roles) == 0 {
 		it.roles = it.keyMgr.keyRoles(it.key)
-	}
-
-	for _, role := range it.roles {
-		if _, ok := role.permissions[permission]; ok {
-			return true
+		if len(it.roles) == 0 {
+			return errors.New("access_key/roles not found")
 		}
 	}
 
-	return false
+	for permission, _ := range permissions {
+		hit := false
+		for _, role := range it.roles {
+			if _, hit = role.permissions[permission]; hit {
+				break
+			}
+		}
+		if !hit {
+			return errors.New("permission=" + permission + " not allow")
+		}
+	}
+
+	return nil
 }
 
 func appSign(version string, payload, data []byte, secretKey string) string {

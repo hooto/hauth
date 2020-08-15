@@ -204,13 +204,26 @@ func (it *AccessKey) UnmarshalTOML(p interface{}) error {
 				it.User = v.(string)
 
 			case "roles":
-				if v2, ok := v.([]string); ok {
-					it.Roles = v2
+				if v2, ok := v.([]interface{}); ok {
+					for _, v3 := range v2 {
+						it.Roles = append(it.Roles, v3.(string))
+					}
 				}
 
 			case "scopes":
-				if v2, ok := v.([]*ScopeFilter); ok {
-					it.Scopes = v2
+				if v2, ok := v.([]map[string]interface{}); ok {
+					for _, v3 := range v2 {
+						var (
+							name, ok1  = v3["name"]
+							value, ok2 = v3["value"]
+						)
+						if ok1 && ok2 {
+							it.Scopes = append(it.Scopes, &ScopeFilter{
+								Name:  name.(string),
+								Value: value.(string),
+							})
+						}
+					}
 				}
 			}
 		}
