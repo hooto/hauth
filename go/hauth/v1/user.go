@@ -35,6 +35,8 @@ type UserValidator struct {
 	payload     string
 	accessKeyId string
 	sign        string
+	keyMgr      *AccessKeyManager
+	key         *AccessKey
 }
 
 func NewUserPayload(id, name string, roles []uint32, groups []string, ttl int64) *UserPayload {
@@ -72,14 +74,14 @@ func (it *UserPayload) SignToken(keyMgr *AccessKeyManager) string {
 }
 
 func UserValid(token string, keyMgr *AccessKeyManager) (*UserValidator, error) {
-	v, err := NewUserValidator(token)
+	v, err := NewUserValidator(token, keyMgr)
 	if err != nil {
 		return nil, err
 	}
-	return v, v.SignValid(keyMgr)
+	return v, v.SignValid()
 }
 
-func NewUserValidator(token string) (*UserValidator, error) {
+func NewUserValidator(token string, keyMgr *AccessKeyManager) (*UserValidator, error) {
 
 	var (
 		n1 = strings.IndexByte(token, '.')
@@ -116,6 +118,8 @@ func NewUserValidator(token string) (*UserValidator, error) {
 			vr.accessKeyId = token[n2+1 : n2k]
 			vr.sign = token[n2k+1:]
 
+			vr.keyMgr = keyMgr
+
 			return &vr, nil
 		}
 	}
@@ -123,21 +127,29 @@ func NewUserValidator(token string) (*UserValidator, error) {
 	return nil, errors.New("invalid sign token")
 }
 
-func (it *UserValidator) SignValid(keyMgr *AccessKeyManager) error {
+func (it *UserValidator) SignValid() error {
+
+	if it.keyMgr == nil {
+		return errors.New("sign denied : no KeyManager found")
+	}
 
 	//
 	if it.IsExpired() {
 		return errors.New("sign token expired")
 	}
 
-	//
-	key := keyMgr.KeyGet(it.accessKeyId)
-	if key == nil ||
-		userSign(it.version, it.payload, key.Secret) != it.sign {
-		return errors.New("sign denied")
+	if it.key == nil {
+		it.key = it.keyMgr.KeyGet(it.accessKeyId)
+		if it.key == nil {
+			return errors.New("sign denied : no AccessKey found")
+		}
 	}
 
-	return nil
+	if userSign(it.version, it.payload, it.key.Secret) == it.sign {
+		return nil
+	}
+
+	return errors.New("sign denied")
 }
 
 func userSign(version, payload, secretKey string) string {

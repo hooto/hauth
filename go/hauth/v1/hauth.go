@@ -15,17 +15,25 @@
 package hauth
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"regexp"
 	"strings"
 	"sync"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/lessos/lessgo/crypto/idhash"
 )
 
 var (
 	AccessKeyIdReg = regexp.MustCompile("^[0-9a-z]{1}[a-z0-9_]{3,31}$")
+)
+
+const (
+	AccessKeyStatusNone   uint64 = 0
+	AccessKeyStatusActive uint64 = 1 << 1
 )
 
 var (
@@ -168,6 +176,12 @@ func (it *AccessKey) redec() {
 	}
 }
 
+func (it *AccessKey) Equal(v *AccessKey) bool {
+	bs1, _ := proto.Marshal(it)
+	bs2, _ := proto.Marshal(v)
+	return bytes.Equal(bs1, bs2)
+}
+
 func (it *AccessKey) reenc() {
 	if it.Id != "" {
 		it.AccessKey = ""
@@ -248,6 +262,42 @@ func (it AccessKey) MarshalJSON() ([]byte, error) {
 	it.redec()
 	it.reenc()
 	return json.Marshal(fixAccessKey(it))
+}
+
+func (it *AccessKey) ScopeSet(set *ScopeFilter) bool {
+	for _, v := range it.Scopes {
+		if set.Name == v.Name {
+			if set.Value == v.Value {
+				return false
+			}
+			v.Value = set.Value
+			return true
+		}
+	}
+	it.Scopes = append(it.Scopes, set)
+	return true
+}
+
+func (it *AccessKey) ScopeDel(name string) bool {
+	for i, v := range it.Scopes {
+		if name == v.Name {
+			it.Scopes = append(it.Scopes[:i], it.Scopes[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (it *AccessKey) ScopeAllow(scope *ScopeFilter) error {
+	for _, v := range it.Scopes {
+		if scope.Name == v.Name {
+			if v.Value != "*" && v.Value != scope.Value {
+				return errors.New("access_key/scopes/name=" + scope.Name + " not match")
+			}
+			break
+		}
+	}
+	return nil
 }
 
 func NewScopeFilter(name, value string) *ScopeFilter {

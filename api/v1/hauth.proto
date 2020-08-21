@@ -24,8 +24,11 @@ message AccessKey {
 	string secret = 2;
 	string user = 3;
 
+	uint64 status = 5;
 	repeated string roles = 6;
 	repeated ScopeFilter scopes = 11;
+
+	string description = 13;
 
 	// v0: access key id
 	string access_key = 21;
