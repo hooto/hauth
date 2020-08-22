@@ -43,7 +43,7 @@ type AppValidator struct {
 	payload []byte
 	sign    string
 	keyMgr  *AccessKeyManager
-	key     *AccessKey
+	Key     *AccessKey
 	roles   []*accessKeyManagerRole
 	scopes  map[string]string
 }
@@ -149,14 +149,14 @@ func (it *AppValidator) SignValid(data []byte) error {
 		return errors.New("sign denied : no KeyManager found")
 	}
 
-	if it.key == nil {
-		it.key = it.keyMgr.KeyGet(it.AppPayload.Id)
-		if it.key == nil {
+	if it.Key == nil {
+		it.Key = it.keyMgr.KeyGet(it.AppPayload.Id)
+		if it.Key == nil {
 			return errors.New("sign denied : no AccessKey found")
 		}
 	}
 
-	if appSign(it.version, it.payload, data, it.key.Secret) == it.sign {
+	if appSign(it.version, it.payload, data, it.Key.Secret) == it.sign {
 		return nil
 	}
 
@@ -169,7 +169,7 @@ func (it *AppValidator) Allow(args ...interface{}) error {
 		return errors.New("args not found")
 	}
 
-	if it.key == nil || it.keyMgr == nil {
+	if it.Key == nil || it.keyMgr == nil {
 		return errors.New("access_key not found")
 	}
 
@@ -195,13 +195,13 @@ func (it *AppValidator) Allow(args ...interface{}) error {
 
 	if len(scopes) > 0 {
 
-		if len(it.key.Scopes) < 1 {
+		if len(it.Key.Scopes) < 1 {
 			return errors.New("access_key/scopes not found")
 		}
 
 		if it.scopes == nil || len(it.scopes) == 0 {
 			it.scopes = map[string]string{}
-			for _, v := range it.key.Scopes {
+			for _, v := range it.Key.Scopes {
 				it.scopes[v.Name] = "," + v.Value + ","
 			}
 		}
@@ -220,7 +220,7 @@ func (it *AppValidator) Allow(args ...interface{}) error {
 	}
 
 	if len(it.roles) == 0 {
-		it.roles = it.keyMgr.keyRoles(it.key)
+		it.roles = it.keyMgr.keyRoles(it.Key)
 		if len(it.roles) == 0 {
 			return errors.New("access_key/roles not found")
 		}

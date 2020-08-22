@@ -29,11 +29,6 @@ message AccessKey {
 	repeated ScopeFilter scopes = 11;
 
 	string description = 13;
-
-	// v0: access key id
-	string access_key = 21;
-	// v0: access key secret
-	string secret_key = 22;
 }
 
 message UserPayload {

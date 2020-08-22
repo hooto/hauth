@@ -17,7 +17,6 @@ package hauth
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"regexp"
 	"strings"
@@ -159,6 +158,13 @@ func NewAccessKey() *AccessKey {
 	}
 }
 
+func (it *AccessKey) Equal(v *AccessKey) bool {
+	bs1, _ := proto.Marshal(it)
+	bs2, _ := proto.Marshal(v)
+	return bytes.Equal(bs1, bs2)
+}
+
+/**
 type fixAccessKey AccessKey
 
 func (it *AccessKey) redec() {
@@ -174,12 +180,6 @@ func (it *AccessKey) redec() {
 	} else {
 		it.SecretKey = it.Secret
 	}
-}
-
-func (it *AccessKey) Equal(v *AccessKey) bool {
-	bs1, _ := proto.Marshal(it)
-	bs2, _ := proto.Marshal(v)
-	return bytes.Equal(bs1, bs2)
 }
 
 func (it *AccessKey) reenc() {
@@ -263,6 +263,7 @@ func (it AccessKey) MarshalJSON() ([]byte, error) {
 	it.reenc()
 	return json.Marshal(fixAccessKey(it))
 }
+*/
 
 func (it *AccessKey) ScopeSet(set *ScopeFilter) bool {
 	for _, v := range it.Scopes {
