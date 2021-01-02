@@ -27,7 +27,8 @@ import (
 )
 
 var (
-	AccessKeyIdReg = regexp.MustCompile("^[0-9a-z]{1}[a-z0-9_]{3,31}$")
+	AccessKeyIdReg    = regexp.MustCompile("^[0-9a-z]{1}[a-z0-9_]{3,31}$")
+	AccessKeySecretRE = regexp.MustCompile("^[a-zA-Z0-9\\-\\_\\+\\/]{8,100}$")
 )
 
 const (
