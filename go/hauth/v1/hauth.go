@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	AccessKeyIdReg    = regexp.MustCompile("^[0-9a-z]{1}[a-z0-9_]{3,31}$")
+	AccessKeyIdRE     = regexp.MustCompile("^[0-9a-z]{1}[a-z0-9_]{3,31}$")
 	AccessKeySecretRE = regexp.MustCompile("^[a-zA-Z0-9\\-\\_\\+\\/]{8,100}$")
 )
 
@@ -69,6 +69,18 @@ func (it *AccessKeyManager) KeySet(k *AccessKey) error {
 
 	if ak, ok := it.items[k.Id]; !ok || k != ak {
 		it.items[k.Id] = k
+	}
+
+	return nil
+}
+
+func (it *AccessKeyManager) KeyDel(id string) error {
+
+	it.mu.Lock()
+	defer it.mu.Unlock()
+
+	if _, ok := it.items[k.Id]; ok {
+		delete(it.items, id)
 	}
 
 	return nil
