@@ -79,7 +79,7 @@ func (it *AccessKeyManager) KeyDel(id string) error {
 	it.mu.Lock()
 	defer it.mu.Unlock()
 
-	if _, ok := it.items[k.Id]; ok {
+	if _, ok := it.items[id]; ok {
 		delete(it.items, id)
 	}
 
