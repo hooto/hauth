@@ -24,23 +24,23 @@ import (
 
 var (
 	tKeysV0 = []*AccessKey{
-		{AccessKey: "be2c1fcf532baaa9", SecretKey: "c9a1a8ca13740018f1dd840a073ffc2e"},
-		{AccessKey: "d4d7d973aa8d3c70", SecretKey: "ec1f6f37c8d81b7bdb855b651523367e"},
+		{Id: "be2c1fcf532baaa9", Secret: "c9a1a8ca13740018f1dd840a073ffc2e"},
+		{Id: "d4d7d973aa8d3c70", Secret: "ec1f6f37c8d81b7bdb855b651523367e"},
 	}
 	tKeysV0Json = []string{
-		`{"access_key":"be2c1fcf532baaa9","secret_key":"c9a1a8ca13740018f1dd840a073ffc2e"}`,
-		`{"access_key":"d4d7d973aa8d3c70","secret_key":"ec1f6f37c8d81b7bdb855b651523367e"}`,
+		`{"id":"be2c1fcf532baaa9","secret":"c9a1a8ca13740018f1dd840a073ffc2e"}`,
+		`{"id":"d4d7d973aa8d3c70","secret":"ec1f6f37c8d81b7bdb855b651523367e"}`,
 	}
 	tKeysV0Toml = []string{
-		`access_key = "be2c1fcf532baaa9"
-secret_key = "c9a1a8ca13740018f1dd840a073ffc2e"
+		`id = "be2c1fcf532baaa9"
+secret = "c9a1a8ca13740018f1dd840a073ffc2e"
 roles = ["sa"]
 [[scopes]]
 name = "name1"
 value = "value1"
 `,
-		`access_key = "d4d7d973aa8d3c70"
-secret_key = "ec1f6f37c8d81b7bdb855b651523367e"
+		`id = "d4d7d973aa8d3c70"
+secret = "ec1f6f37c8d81b7bdb855b651523367e"
 roles = ["sa"]
 [[scopes]]
 name = "name1"
@@ -56,8 +56,8 @@ func Test_AccessKey_JsonDecode(t *testing.T) {
 		if err := json.Unmarshal([]byte(js), &ak); err != nil {
 			t.Fatalf("Decode %v", err)
 		} else {
-			if ak.Id != tKeysV0[i].AccessKey ||
-				ak.Secret != tKeysV0[i].SecretKey {
+			if ak.Id != tKeysV0[i].Id ||
+				ak.Secret != tKeysV0[i].Secret {
 				t.Fatalf("Decode v0 -> v1")
 			}
 		}
@@ -72,8 +72,8 @@ func Test_AccessKey_JsonEncode(t *testing.T) {
 			t.Fatalf("Encode %v", err)
 		} else {
 
-			if !bytes.Contains(bs, []byte(ak.AccessKey)) ||
-				bytes.Contains(bs, []byte("access_key")) {
+			if !bytes.Contains(bs, []byte(ak.Id)) ||
+				bytes.Contains(bs, []byte("id")) {
 				t.Fatalf("Encode v0 -> v1 %v", string(bs))
 			} else {
 				t.Logf("Encode v0 -> v1 OK")
@@ -89,8 +89,8 @@ func Test_AccessKey_TomlDecode(t *testing.T) {
 		if err := htoml.Decode(&ak, []byte(js)); err != nil {
 			t.Fatalf("Decode %v", err)
 		} else {
-			if ak.Id != tKeysV0[i].AccessKey ||
-				ak.Secret != tKeysV0[i].SecretKey ||
+			if ak.Id != tKeysV0[i].Id ||
+				ak.Secret != tKeysV0[i].Secret ||
 				len(ak.Roles) != 1 || ak.Roles[0] != "sa" ||
 				len(ak.Scopes) != 1 || ak.Scopes[0].Name != "name1" {
 				t.Fatalf("Decode v0 -> v1")
@@ -100,7 +100,7 @@ func Test_AccessKey_TomlDecode(t *testing.T) {
 					t.Fatalf("Encode %v", err)
 				} else {
 
-					if !bytes.Contains(bs, []byte(ak.AccessKey)) ||
+					if !bytes.Contains(bs, []byte(ak.Id)) ||
 						!bytes.Contains(bs, []byte("id = ")) {
 						t.Fatalf("Encode v0 -> v1 %v", string(bs))
 					} else {

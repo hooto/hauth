@@ -20,68 +20,94 @@ option optimize_for = LITE_RUNTIME;
 option go_package = ".;hauth";
 
 message AccessKey {
-	string id = 1;
-	string secret = 2;
-	string user = 3;
+  string id = 1;
+  string secret = 2;
+  string user = 3;
 
-	uint64 status = 5;
-	repeated string roles = 6;
-	repeated ScopeFilter scopes = 11;
+  uint64 status = 5;
+  repeated string roles = 6;
+  repeated ScopeFilter scopes = 11;
 
-	string description = 13;
+  string description = 13;
 }
 
 message UserPayload {
-	string id = 1; // struct:object_slice_key
-	string name = 2;
-	repeated uint32 roles = 4;
-	repeated string groups = 5;
-	int64 expired = 9; // unix time in seconds
+  string id = 1;  // struct:object_slice_key
+  string name = 2;
+  repeated uint32 roles = 4;
+  repeated string groups = 5;
+  int64 expired = 9;  // unix time in seconds
 }
 
 message AppPayload {
-	string id = 1;
-	string user = 2;
-	string access_key = 3;
-	int64 created = 9; // unix time in milliseconds
+  string id = 1;
+  string user = 2;
+  string access_key = 3;
+  int64 created = 9;  // unix time in milliseconds
 }
-
 
 // A role in the RBAC.
 message Role {
+  // The name of the role.
+  string name = 1;
 
-	// The name of the role.
-	string name = 1;
+  // Optional. A human-readable title for the role. Typically this
+  // is limited to 100 UTF-8 bytes.
+  string title = 2;
 
-	// Optional. A human-readable title for the role. Typically this
-	// is limited to 100 UTF-8 bytes.
-	string title = 2;
+  // Optional. A human-readable description for the role.
+  string description = 3;
 
-	// Optional. A human-readable description for the role.
-	string description = 3;
+  // The names of the permissions this role grants when bound in an IAM policy.
+  repeated string permissions = 7;
 
-	// The names of the permissions this role grants when bound in an IAM policy.
-	repeated string permissions = 7;
-
-	// The current launch status of the role.
-	uint64 status = 10;
+  // The current launch status of the role.
+  uint64 status = 10;
 }
 
 // A permission which can be included by a role.
 message Permission {
+  // The name of this Permission.
+  string name = 1;
 
-	// The name of this Permission.
-	string name = 1;
+  // The title of this Permission.
+  string title = 2;
 
-	// The title of this Permission.
-	string title = 2;
-
-	// A brief description of what this Permission is used for.
-	// This permission can ONLY be used in predefined roles.
-	string description = 3;
+  // A brief description of what this Permission is used for.
+  // This permission can ONLY be used in predefined roles.
+  string description = 3;
 }
 
 message ScopeFilter {
-	string name = 1;
-	string value = 2;
+  string name = 1;
+  string value = 2;
+}
+
+// Transport Layer Security Key Sets
+message TLSKey {
+  string key = 2;
+  string cert = 3;
+  TLSKeyOptions options = 4;
+  repeated TLSKeyPair nodes = 8;
+  repeated TLSKeyPair clients = 9;
+  string comment = 10;
+}
+
+message TLSKeyOptions {
+  repeated string country = 1;
+  repeated string organization = 2;
+  repeated string organizational_unit = 3;
+  repeated string locality = 4;
+  repeated string province = 5;
+  repeated string street_address = 6;
+  repeated string postal_code = 7;
+  string serial_number = 8;
+  string common_name = 9;
+  bool IsCA = 10;
+}
+
+message TLSKeyPair {
+  string name = 1;
+  string key = 2;
+  string cert = 3;
 }
