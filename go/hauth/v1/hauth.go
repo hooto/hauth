@@ -1,4 +1,4 @@
-// Copyright 2020 Eryx <evorui аt gmail dοt com>, All rights reserved.
+// Copyright 2020 Eryx <evorui at gmail dot com>, All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/lessos/lessgo/crypto/idhash"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -39,7 +38,7 @@ const (
 var (
 	authKeyDefault = &AccessKey{
 		Id:     "00000000",
-		Secret: idhash.RandBase64String(40),
+		Secret: randBase64String(40),
 	}
 	base64Std = base64.StdEncoding.WithPadding(base64.NoPadding)
 	base64Url = base64.URLEncoding.WithPadding(base64.NoPadding)
@@ -166,8 +165,8 @@ func base64pad(s string) string {
 
 func NewAccessKey() *AccessKey {
 	return &AccessKey{
-		Id:     idhash.RandHexString(16),
-		Secret: idhash.RandBase64String(40),
+		Id:     randHexString(16),
+		Secret: randBase64String(40),
 	}
 }
 
