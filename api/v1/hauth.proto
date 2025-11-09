@@ -23,6 +23,7 @@ message AccessKey {
   string id = 1;
   string secret = 2;
   string user = 3;
+  string type = 4;
 
   uint64 status = 5;
   repeated string roles = 6;

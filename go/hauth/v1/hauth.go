@@ -109,6 +109,12 @@ func (it *AccessKeyManager) KeyRand() *AccessKey {
 	return authKeyDefault
 }
 
+func (it *AccessKeyManager) Count() int {
+	it.mu.Lock()
+	defer it.mu.Unlock()
+	return len(it.items)
+}
+
 func (it *AccessKeyManager) RoleSet(r *Role) *AccessKeyManager {
 
 	it.mu.Lock()
@@ -175,107 +181,6 @@ func (it *AccessKey) Equal(v *AccessKey) bool {
 	bs2, _ := proto.Marshal(v)
 	return bytes.Equal(bs1, bs2)
 }
-
-/**
-type fixAccessKey AccessKey
-
-func (it *AccessKey) redec() {
-
-	if it.Id == "" && it.AccessKey != "" {
-		it.Id = it.AccessKey
-	} else {
-		it.AccessKey = it.Id
-	}
-
-	if it.Secret == "" && it.SecretKey != "" {
-		it.Secret = it.SecretKey
-	} else {
-		it.SecretKey = it.Secret
-	}
-}
-
-func (it *AccessKey) reenc() {
-	if it.Id != "" {
-		it.AccessKey = ""
-	}
-	if it.Secret != "" {
-		it.SecretKey = ""
-	}
-}
-
-func (it *AccessKey) UnmarshalTOML(p interface{}) error {
-
-	data, ok := p.(map[string]interface{})
-	if ok {
-
-		for k, v := range data {
-			switch k {
-			case "id":
-				it.Id = v.(string)
-
-			case "access_key":
-				if it.Id == "" {
-					it.Id = v.(string)
-				}
-
-			case "secret":
-				it.Secret = v.(string)
-
-			case "secret_key":
-				if it.Secret == "" {
-					it.Secret = v.(string)
-				}
-
-			case "user":
-				it.User = v.(string)
-
-			case "roles":
-				if v2, ok := v.([]interface{}); ok {
-					for _, v3 := range v2 {
-						it.Roles = append(it.Roles, v3.(string))
-					}
-				}
-
-			case "scopes":
-				if v2, ok := v.([]map[string]interface{}); ok {
-					for _, v3 := range v2 {
-						var (
-							name, ok1  = v3["name"]
-							value, ok2 = v3["value"]
-						)
-						if ok1 && ok2 {
-							it.Scopes = append(it.Scopes, &ScopeFilter{
-								Name:  name.(string),
-								Value: value.(string),
-							})
-						}
-					}
-				}
-			}
-		}
-
-		it.redec()
-	}
-
-	return nil
-}
-
-func (it *AccessKey) UnmarshalJSON(b []byte) error {
-	var it2 fixAccessKey
-	if err := json.Unmarshal(b, &it2); err != nil {
-		return err
-	}
-	*it = AccessKey(it2)
-	it.redec()
-	return nil
-}
-
-func (it AccessKey) MarshalJSON() ([]byte, error) {
-	it.redec()
-	it.reenc()
-	return json.Marshal(fixAccessKey(it))
-}
-*/
 
 func (it *AccessKey) ScopeSet(set *ScopeFilter) bool {
 	for _, v := range it.Scopes {
