@@ -60,8 +60,9 @@ type AuthLoginResponse struct {
 	IdentityToken IdentityToken `json:"identity_token"`
 }
 
-type AuthLoginClaims struct {
-	Iat   int64  `json:"iat"` // Issued At Time
+type AuthClaims struct {
+	Jti   string `json:"jti,omitempty"` // JWT ID
+	Iat   int64  `json:"iat"`           // Issued At Time
 	Exp   int64  `json:"exp"`
 	State string `json:"state,omitempty"`
 }

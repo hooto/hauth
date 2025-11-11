@@ -32,6 +32,8 @@ type IdentityToken struct {
 	Roles  []uint32 `json:"roles,omitempty"`
 	Groups []string `json:"groups,omitempty"`
 
+	Type string `json:"type,omitempty"`
+
 	Scopes []*hauth1.ScopeFilter `json:"scopes,omitempty"`
 }
 
@@ -39,12 +41,8 @@ func (it *IdentityToken) IsExpired() bool {
 	return it == nil || it.Exp <= time.Now().Unix()
 }
 
-func (it *IdentityToken) Allow(user string) bool {
+func (it *IdentityToken) Allow(user string, args ...any) bool {
 	if it == nil || user == "" {
-		return false
-	}
-
-	if user != it.Sub && !slices.Contains(it.Groups, user) {
 		return false
 	}
 
@@ -52,5 +50,30 @@ func (it *IdentityToken) Allow(user string) bool {
 		return false
 	}
 
-	return true
+	if user == it.Sub ||
+		slices.Contains(it.Groups, user) {
+
+		return true
+	}
+
+	if it.Type == "App" {
+
+		if len(it.Scopes) > 0 && len(args) > 0 {
+
+			for _, arg := range args {
+				if arg == nil {
+					continue
+				}
+				switch arg.(type) {
+				case *hauth1.ScopeFilter:
+					scope := arg.(*hauth1.ScopeFilter)
+					if scopesAllow(it.Scopes, scope) {
+						return true
+					}
+				}
+			}
+		}
+	}
+
+	return false
 }

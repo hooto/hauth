@@ -48,10 +48,12 @@ func NewAuthConnectorWithAccessKey(
 type authConnector struct {
 	ak *hauth1.AccessKey
 
+	jti string
+
 	signer Signer
 
-	loginHeader        TokenHeader
-	loginClaims        AuthLoginClaims
+	Header             TokenHeader
+	Claims             AuthClaims
 	loginSigningString string
 	loginSignString    string
 
@@ -63,35 +65,14 @@ func (it *authConnector) AccessKey() *hauth1.AccessKey {
 }
 
 func (it *authConnector) LoginToken() string {
-
-	tn := time.Now().Unix()
-
-	it.loginHeader = TokenHeader{
-		Alg: it.signer.Name(),
-		Kid: it.ak.Id,
-	}
-
-	it.loginClaims = AuthLoginClaims{
-		Iat:   tn,
-		Exp:   tn + 10,
-		State: uuid.NewString(),
-	}
-
-	it.loginSigningString = bytesEncode(jsonEncode(it.loginHeader)) + "." +
-		bytesEncode(jsonEncode(it.loginClaims))
-
-	bs, _ := it.signer.Sign(it.loginSigningString, []byte(it.ak.Secret))
-
-	it.loginSignString = bytesEncode(bs)
-
-	return it.loginSigningString + "." + it.loginSignString
+	return it.genToken()
 }
 
 func (it *authConnector) AccessToken() string {
-	if it.accessToken != nil {
+	if it.ak.Type != "App" && it.accessToken != nil {
 		return it.accessToken.raw
 	}
-	return ""
+	return it.genToken()
 }
 
 func (it *authConnector) RefreshAccessToken(accessToken string) error {
@@ -108,4 +89,38 @@ func (it *authConnector) RefreshAccessToken(accessToken string) error {
 	it.accessToken = token
 
 	return nil
+}
+
+func (it *authConnector) genToken() string {
+
+	if it.jti == "" {
+		it.jti = uuid.NewString()
+	}
+
+	tn := time.Now().Unix()
+
+	it.Header = TokenHeader{
+		Alg: it.signer.Name(),
+		Kid: it.ak.Id,
+	}
+
+	it.Claims = AuthClaims{
+		Iat: tn,
+		Exp: tn + 60,
+	}
+
+	if it.ak.Type == "App" {
+		it.Claims.Jti = it.jti
+	} else {
+		it.Claims.State = uuid.NewString()
+	}
+
+	it.loginSigningString = bytesEncode(jsonEncode(it.Header)) + "." +
+		bytesEncode(jsonEncode(it.Claims))
+
+	bs, _ := it.signer.Sign(it.loginSigningString, []byte(it.ak.Secret))
+
+	it.loginSignString = bytesEncode(bs)
+
+	return it.loginSigningString + "." + it.loginSignString
 }

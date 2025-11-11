@@ -104,6 +104,11 @@ func (it *AccessToken) Verify(keyMgr *hauth1.AccessKeyManager) (*hauth1.AccessKe
 		return nil, errors.New("access-token expired")
 	}
 
+	if ak.Type == "App" &&
+		absInt64(time.Now().Unix()-it.Claims.Iat) > 60 {
+		return nil, errors.New("auth-denied : iat expired")
+	}
+
 	b, err := it.signer.Sign(it.signingString, ak.Secret)
 	if err != nil {
 		return nil, err

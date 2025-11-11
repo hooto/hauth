@@ -51,6 +51,19 @@ func RandHexString(siz int) string {
 	return hex.EncodeToString(randGen(siz / 2))
 }
 
+func randBase64String(siz int) string {
+
+	if siz < 4 {
+		siz = 1
+	} else if siz%4 > 0 {
+		siz = siz/4 + 1
+	} else {
+		siz = siz / 4
+	}
+
+	return base64.RawStdEncoding.EncodeToString(randGen(3 * siz))
+}
+
 func absInt64(a int64) int64 {
 	if a < 0 {
 		return -a
