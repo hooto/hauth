@@ -14,7 +14,7 @@
 
 package hauth
 
-import hauth1 "github.com/hooto/hauth/go/hauth/v1"
+import hauth1 "github.com/hooto/hauth/go/v1"
 
 const (
 	appHttpHeaderName = "x-hauth2"

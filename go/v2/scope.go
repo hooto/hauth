@@ -14,22 +14,23 @@
 
 package hauth
 
-import (
-	hauth1 "github.com/hooto/hauth/go/hauth/v1"
-)
+import hauth1 "github.com/hooto/hauth/go/v1"
 
-func NewUserAccessKey() *hauth1.AccessKey {
-	return &hauth1.AccessKey{
-		Id:     RandHexString(16),
-		Secret: randBase64String(40),
-		Type:   "User",
+func NewScopeFilter(name, value string) *hauth1.ScopeFilter {
+	return &hauth1.ScopeFilter{
+		Name:  name,
+		Value: value,
 	}
 }
 
-func NewAppAccessKey() *hauth1.AccessKey {
-	return &hauth1.AccessKey{
-		Id:     RandHexString(16),
-		Secret: randBase64String(40),
-		Type:   "App",
+func scopesAllow(scopes []*hauth1.ScopeFilter, scope *hauth1.ScopeFilter) bool {
+	for _, v := range scopes {
+		if scope.Name != v.Name {
+			continue
+		}
+		if v.Value == "*" || v.Value == scope.Value {
+			return true
+		}
 	}
+	return false
 }

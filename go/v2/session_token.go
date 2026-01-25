@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	hauth1 "github.com/hooto/hauth/go/hauth/v1"
+	hauth1 "github.com/hooto/hauth/go/v1"
 )
 
 func NewSessionTokenManager(keyMgr *hauth1.AccessKeyManager) SessionTokenManager {

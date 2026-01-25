@@ -21,8 +21,8 @@ import (
 	"crypto/rsa"
 	"testing"
 
-	hauth1 "github.com/hooto/hauth/go/hauth/v1"
-	hauth2 "github.com/hooto/hauth/v2/hauth"
+	hauth1 "github.com/hooto/hauth/go/v1"
+	hauth2 "github.com/hooto/hauth/go/v2"
 )
 
 var (
