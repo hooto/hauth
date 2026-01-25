@@ -14,7 +14,7 @@
 
 package hauth
 
-import hauth1 "github.com/hooto/hauth/go/v1"
+import hauth1 "github.com/hooto/hauth/go"
 
 func NewScopeFilter(name, value string) *hauth1.ScopeFilter {
 	return &hauth1.ScopeFilter{

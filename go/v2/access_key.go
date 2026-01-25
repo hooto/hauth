@@ -15,7 +15,7 @@
 package hauth
 
 import (
-	hauth1 "github.com/hooto/hauth/go/v1"
+	hauth1 "github.com/hooto/hauth/go"
 )
 
 func NewUserAccessKey() *hauth1.AccessKey {

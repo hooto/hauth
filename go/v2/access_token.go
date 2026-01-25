@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	hauth1 "github.com/hooto/hauth/go/v1"
+	hauth1 "github.com/hooto/hauth/go"
 	"google.golang.org/grpc/metadata"
 )
 

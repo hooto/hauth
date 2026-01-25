@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/uuid"
 
-	hauth1 "github.com/hooto/hauth/go/v1"
+	hauth1 "github.com/hooto/hauth/go"
 )
 
 func NewAuthConnectorWithAccessKey(

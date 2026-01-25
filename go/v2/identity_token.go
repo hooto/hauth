@@ -18,7 +18,7 @@ import (
 	"slices"
 	"time"
 
-	hauth1 "github.com/hooto/hauth/go/v1"
+	hauth1 "github.com/hooto/hauth/go"
 )
 
 type IdentityToken struct {

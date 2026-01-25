@@ -1,4 +1,4 @@
-module github.com/hooto/hauth/go/v1
+module github.com/hooto/hauth/go
 
 go 1.25.6
 
